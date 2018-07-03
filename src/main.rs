@@ -75,7 +75,7 @@ impl NbtContainer {
 
 
 fn main() {
-    let mut reader = File::open("hello_world.nbt").unwrap();
+    let mut reader = File::open("test.nbt").unwrap();
     reader.read_u8();
     let len = reader.read_i16::<BigEndian>().unwrap();
     let mut buf = Vec::with_capacity(len as usize);
