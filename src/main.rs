@@ -44,72 +44,72 @@ pub enum Compression {
 }
 
 impl NbtTag {
-    pub fn as_byte(&self) -> Option<u8> {
+    pub fn as_byte(&self) -> Option<&u8> {
         match *self {
-            NbtTag::Byte(val) => Some(val),
+            NbtTag::Byte(ref val) => Some(val),
             _ => None
         }
     }
 
-    pub fn as_short(&self) -> Option<i16> {
+    pub fn as_short(&self) -> Option<&i16> {
         match *self {
-            NbtTag::Short(val) => Some(val),
+            NbtTag::Short(ref val) => Some(val),
             _ => None
         }
     }
 
-    pub fn as_int(&self) -> Option<i32> {
+    pub fn as_int(&self) -> Option<&i32> {
         match *self {
-            NbtTag::Int(val) => Some(val),
+            NbtTag::Int(ref val) => Some(val),
             _ => None
         }
     }
 
-    pub fn as_float(&self) -> Option<f32> {
+    pub fn as_float(&self) -> Option<&f32> {
         match *self {
-            NbtTag::Float(val) => Some(val),
+            NbtTag::Float(ref val) => Some(val),
             _ => None
         }
     }
 
-    pub fn as_double(&self) -> Option<f64> {
+    pub fn as_double(&self) -> Option<&f64> {
         match *self {
-            NbtTag::Double(val) => Some(val),
+            NbtTag::Double(ref val) => Some(val),
             _ => None
         }
     }
 
-    pub fn as_byte_arr(&self) -> Option<Vec<u8>> {
+    pub fn as_byte_arr(&self) -> Option<&Vec<u8>> {
         match *self {
-            NbtTag::ByteArray(val) => Some(val),
+            NbtTag::ByteArray(ref val) => Some(val),
             _ => None
         }
     }
 
-    pub fn as_list(&self) -> Option<Vec<NbtTag>> {
+    pub fn as_list(&self) -> Option<&Vec<NbtTag>> {
         match *self {
-            NbtTag::List(val) => Some(val),
+            NbtTag::List(ref val) => Some(val),
             _ => None
         }
     }
 
-    pub fn as_compound(&self) -> Option<HashMap<String, NbtTag>> {
+    pub fn as_compound(&self) -> Option<&HashMap<String, NbtTag>> {
         match *self {
-            NbtTag::Compound(val) => Some(val),
+            NbtTag::Compound(ref val) => Some(val),
             _ => None
         }
     }
 
-    pub fn as_int_arr(&self) -> Option<Vec<i32>> {
+    pub fn as_int_arr(&self) -> Option<&Vec<i32>> {
         match *self {
-            NbtTag::IntArray(val) => Some(val),
+            NbtTag::IntArray(ref val) => Some(val),
             _ => None
         }
     }
 
-    pub fn as_long_arr(&self) -> Option<Vec<i64>> {
+    pub fn as_long_arr(&self) -> Option<&Vec<i64>> {
         match *self {
-            NbtTag::LongArray(val) => Some(val),
+            NbtTag::LongArray(ref val) => Some(val),
             _ => None
         }
     }
