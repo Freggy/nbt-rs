@@ -7,22 +7,21 @@ use std::io::Read;
 use byteorder::ReadBytesExt;
 use byteorder::BigEndian;
 use std::io::Error;
+use std::io::ErrorKind;
 
-/// The binray ID of each NBT tag.
-enum NbtTagId {
-    End = 0x0,
-    Byte = 0x1,
-    Short = 0x2,
-    Int = 0x3,
-    Float = 0x4,
-    Double = 0x5,
-    ByteArray = 0x6,
-    String = 0x7,
-    List = 0x8,
-    Compound = 0xA,
-    IntArray = 0xB,
-    LongArray = 0xC
-}
+const TAG_END       : u8 = 0x0;
+const TAG_BYTE      : u8 = 0x1;
+const TAG_SHORT     : u8 = 0x2;
+const TAG_INT       : u8 = 0x3;
+const TAG_LONG      : u8 = 0x4;
+const TAG_FLOAT     : u8 = 0x5;
+const TAG_DOUBLE    : u8 = 0x6;
+const TAG_BYTE_ARRAY: u8 = 0x7;
+const TAG_STRING    : u8 = 0x8;
+const TAG_LIST      : u8 = 0x9;
+const TAG_COMPOUND  : u8 = 0xA;
+const TAG_INT_ARRAY : u8 = 0xB;
+const TAG_LONG_ARRAY: u8 = 0xC;
 
 /// Represents an NBT tag.
 pub enum NbtTag {
@@ -35,11 +34,16 @@ pub enum NbtTag {
     List(Vec<NbtTag>),
     Compound(HashMap<String, NbtTag>),
     IntArray(Vec<i32>),
-    LongArray(Vec<i64>)
+    LongArray(Vec<i64>),
+}
+
+pub enum Compression {
+    Gzip,
+    Zlib,
+    None,
 }
 
 impl NbtTag {
-
     pub fn as_byte(&self) -> Option<u8> {
         match *self {
             NbtTag::Byte(val) => Some(val),
@@ -109,74 +113,63 @@ impl NbtTag {
             _ => None
         }
     }
+
+    pub fn read(file: File, comp: Compression) {
+        // TODO: use flate2 for decompression
+        match comp {
+            Compression::Gzip => (),
+            Compression::Zlib => (),
+            Compression::None => (),
+        }
+    }
 }
-
-
-
 
 ///////////////////////
 
-pub struct NbtReader {
+pub struct NbtContainer {
     values: HashMap<String, NbtTag>
 }
 
 impl NbtContainer {
-
-    pub fn from_file_uncompressed(file: File) -> NbtContainer {
-
-    }
+    pub fn from_file_uncompressed(file: File)  {}
 
     fn read<R: ReadBytesExt>(reader: &mut R) -> Result<NbtTag, Error> {
-
         match reader.read_u8()? {
-            0xA => read_compound_tag(reader)?
+            TAG_COMPOUND => NbtContainer::read_compound_tag(reader),
+            _ => Err(Error::new(ErrorKind::Other, "Unknown NBT identifier"))
         }
-
     }
 
     fn read_compound_tag<T: ReadBytesExt>(reader: &mut T) -> Result<NbtTag, Error> {
         let mut tags = HashMap::new();
-
-        // Read compound tag name
-        let name_len = reader.read_i16::<BigEndian>()?;
-        let mut buf = Vec::with_capacity(name_len as usize);
-        read_slice(&mut reader, &mut buf, len);
-        let tag_name = String::from_utf8(buf)?;
-
+        let tag_name = NbtContainer::read_utf8_string(reader)?;
         loop {
             let id = reader.read_u8()?;
-            if id == NbtTagId::End {
+            if id == TAG_END {
                 break;
             }
-            let name = "bla"; // TODO: read tag name
+            let name = NbtContainer::read_utf8_string(reader)?;
             let tag = NbtContainer::read(reader)?;
-            tags.insert(name, tag)
+            tags.insert(name, tag);
         }
+        Ok(NbtTag::Compound(tags))
+    }
 
-        Ok(NbtTag::Compound(TagInfo {
-            name: tag_name,
-            value: tags
-        }))
+    /// Reads a UTF8 string.
+    fn read_utf8_string<T: ReadBytesExt>(reader: &mut T) -> Result<String, Error> {
+        let len = reader.read_i16::<BigEndian>()?;
+        let mut buf = Vec::with_capacity(len as usize);
+        NbtContainer::read_slice(reader, &mut buf, len);
+        Ok(String::from_utf8(buf).unwrap())
+    }
+
+    /// Reads a slice of bytes of given length from reader and saves it in a given buffer.
+    fn read_slice<T: ReadBytesExt>(reader: &mut T, buf: &mut Vec<u8>, size: i16) {
+        for i in 0..size {
+            buf.push(reader.read_u8().unwrap());
+        }
     }
 }
 
 
-
-
-fn main() {
-    let mut reader = File::open("test.nbt").unwrap();
-    reader.read_u8();
-    let len = reader.read_i16::<BigEndian>().unwrap();
-    let mut buf = Vec::with_capacity(len as usize);
-
-    read_slice(&mut reader, &mut buf, len);
-
-    println!("{:?}", String::from_utf8(buf).unwrap());
-}
-
-
-fn read_slice<T: ReadBytesExt>(reader: &mut T, buf: &mut Vec<u8>, size: i16)  {
-    for i in 0..size {
-        buf.push(reader.read_u8().unwrap());
-    }
-}
+fn main() {}
