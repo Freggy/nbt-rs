@@ -8,7 +8,6 @@ use byteorder::ReadBytesExt;
 use byteorder::BigEndian;
 use std::io::Error;
 use std::io::ErrorKind;
-use byteorder::ByteOrder;
 use std::marker::PhantomData;
 
 const TAG_END       : u8 = 0x0;
@@ -43,6 +42,7 @@ pub enum NbtTag {
     Long(i64),
     Float(f32),
     Double(f64),
+    String(String),
     ByteArray(Vec<u8>),
     List(Vec<NbtTag>),
     Compound(HashMap<String, NbtTag>),
@@ -195,7 +195,7 @@ impl <F: ByteOrder> NbtReader<F> {
             TAG_FLOAT => self.read_float(reader),
             TAG_DOUBLE => self.read_double(reader),
             TAG_BYTE_ARRAY => self.read_byte_array(reader),
-            TAG_STRING => self.read_utf8_string(reader),
+            TAG_STRING => Ok(NbtTag::String(self.read_utf8_string(reader)?)),
             TAG_LIST => self.read_list(reader),
             TAG_INT_ARRAY => self.read_int_array(reader),
             TAG_LONG_ARRAY => self.read_long_array(reader),
@@ -272,9 +272,9 @@ impl <F: ByteOrder> NbtReader<F> {
 
     /// Reads a byte array form the given reader. The array is prefixed with its length.
     fn read_byte_array<R: ReadBytesExt>(&self, reader: &mut R) -> Result<NbtTag, Error> {
-        let buf = vec![];
+        let mut buf = vec![];
         let len = reader.read_i32::<F>()?;
-        self.read_slice(reader, buf, len);
+        self.read_slice(reader, &mut buf, len);
         Ok(NbtTag::ByteArray(buf))
     }
 
