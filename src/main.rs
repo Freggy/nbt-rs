@@ -40,6 +40,7 @@ pub enum NbtTag {
     Byte(u8),
     Short(i16),
     Int(i32),
+    Long(i64),
     Float(f32),
     Double(f64),
     ByteArray(Vec<u8>),
@@ -187,6 +188,17 @@ impl <F: ByteOrder> NbtReader<F> {
     fn read<R: ReadBytesExt>(&self, reader: &mut R) -> Result<NbtTag, Error> {
         match reader.read_u8()? {
             TAG_COMPOUND => self.read_compound_tag(reader),
+            TAG_BYTE => self.read_byte(reader),
+            TAG_SHORT => self.read_short(reader),
+            TAG_INT => self.read_int(reader),
+            TAG_LONG => self.read_float(reader),
+            TAG_FLOAT => self.read_float(reader),
+            TAG_DOUBLE => self.read_double(reader),
+            TAG_BYTE_ARRAY => self.read_byte_array(reader),
+            TAG_STRING => self.read_utf8_string(reader),
+            TAG_LIST => self.read_list(reader),
+            TAG_INT_ARRAY => self.read_int_array(reader),
+            TAG_LONG_ARRAY => self.read_long_array(reader),
             _ => Err(Error::new(ErrorKind::Other, "Unknown NBT identifier"))
         }
     }
@@ -207,24 +219,108 @@ impl <F: ByteOrder> NbtReader<F> {
         Ok(NbtTag::Compound(tags))
     }
 
+    /// Reads a byte from the given reader using the specified endianness,
+    fn read_byte<R: ReadBytesExt>(&self, reader: &mut R) -> Result<NbtTag, Error> {
+        Ok(NbtTag::Byte(reader.read_u8()?))
+    }
+
+    /// Reads a short from the given reader using the specified endianness,
+    fn read_short<R: ReadBytesExt>(&self, reader: &mut R) -> Result<NbtTag, Error> {
+        Ok(NbtTag::Short(reader.read_i16::<F>()?))
+    }
+
+    /// Reads a integer from the given reader using the specified endianness.
+    fn read_int<R: ReadBytesExt>(&self, reader: &mut R) -> Result<NbtTag, Error> {
+        Ok(NbtTag::Int(reader.read_i32::<F>()?))
+    }
+
+    /// Reads a long from the given reader using the specified endianness.
+    fn read_long<R: ReadBytesExt>(&self, reader: &mut R) -> Result<NbtTag, Error> {
+        Ok(NbtTag::Long(reader.read_i64::<F>()?))
+    }
+
+    /// Reads a float from the given reader using the specified endianness.
+    fn read_float<R: ReadBytesExt>(&self, reader: &mut R) -> Result<NbtTag, Error> {
+        Ok(NbtTag::Float(reader.read_f32::<F>()?))
+    }
+
+    /// Reads a double from the given reader using the specified endianness.
+    fn read_double<R: ReadBytesExt>(&self, reader: &mut R) -> Result<NbtTag, Error> {
+        Ok(NbtTag::Double(reader.read_f64::<F>()?))
+    }
+
+    /// Reads a list of NbtTags from the given reader. The list is prefixed with the NBT tag ID,
+    /// which specifies the type of tags the list contains, and the size of the list.
+    fn read_list<R: ReadBytesExt>(&self, reader: &mut R) -> Result<NbtTag, Error> {
+        let id = reader.read_u8()?;
+        let len = reader.read_i32::<F>()?;
+        if len <= 0 {
+            return Ok(NbtTag::List(vec![]))
+        }
+
+        let mut bytes = vec![];
+        let mut tags = vec![];
+        self.read_slice(reader, &mut bytes, len);
+
+
+        match id {
+            TAG_COMPOUND => self.read_types(self.read_compound_tag, reader, &mut tags)
+        }
+
+        Ok(NbtTag::List(tags))
+    }
+
+    /// Reads a byte array form the given reader. The array is prefixed with its length.
+    fn read_byte_array<R: ReadBytesExt>(&self, reader: &mut R) -> Result<NbtTag, Error> {
+        let buf = vec![];
+        let len = reader.read_i32::<F>()?;
+        self.read_slice(reader, buf, len);
+        Ok(NbtTag::ByteArray(buf))
+    }
+
+    /// Reads a integer array from the given reader. The array is prefixed with its length.
+    fn read_int_array<R: ReadBytesExt>(&self, reader: &mut R) -> Result<NbtTag, Error> {
+        let len = reader.read_i32::<F>()? / 4; // Since one int is 4 bytes we can determine how many entries this list has.
+        let mut buf = vec![];
+        for _ in 0..len {
+            buf.push(reader.read_i32::<F>()?)
+        }
+        Ok(NbtTag::IntArray(buf))
+    }
+
+    /// Reads a long array from the given reader. The array is prefixed with its length.
+    fn read_long_array<R: ReadBytesExt>(&self, reader: &mut R) -> Result<NbtTag, Error> {
+        let len = reader.read_i32::<F>()? / 8; // Since one long is 8 bytes we can determine how many entries this list has.
+        let mut buf = vec![];
+        for _ in 0..len {
+            buf.push(reader.read_i64::<F>()?)
+        }
+        Ok(NbtTag::LongArray(buf))
+    }
+
     /// Reads a UTF8 string.
     fn read_utf8_string<R: ReadBytesExt>(&self, reader: &mut R) -> Result<String, Error> {
         let len = reader.read_i16::<F>()?;
         let mut buf = Vec::with_capacity(len as usize);
-        self.read_slice(reader, &mut buf, len);
+        self.read_slice(reader, &mut buf, len as i32);
         Ok(String::from_utf8(buf).unwrap())
     }
 
     /// Reads a slice of bytes of given length from reader and saves it in a given buffer.
-    fn read_slice<R: ReadBytesExt>(&self, reader: &mut R, buf: &mut Vec<u8>, size: i16) {
-        for i in 0..size {
+    fn read_slice<R: ReadBytesExt>(&self, reader: &mut R, buf: &mut Vec<u8>, len: i32) {
+        for i in 0..len {
             buf.push(reader.read_u8().unwrap());
+        }
+    }
+
+    fn read_types<R: ReadBytesExt>(&self, read_func: &Fn(&mut R) -> Result<NbtTag, Error>, reader: &mut R, tags: &mut Vec<NbtTag>) {
+        loop {
+            let tag: NbtTag = read_func(self, reader).unwrap();
+            //tags.push(tag)
         }
     }
 }
 
 fn main() {
-    let tag = NbtBuilder::new().add_i32("hallo", 2).add_i32("hello", 3).build();
-    println!("{:?}", tag.as_compound().unwrap().get("hallo").unwrap().as_int());
-    println!("{:?}", tag.as_compound().unwrap().get("hello").unwrap().as_int());
+
 }
