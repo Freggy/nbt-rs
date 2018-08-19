@@ -8,6 +8,8 @@ use byteorder::ReadBytesExt;
 use byteorder::BigEndian;
 use std::io::Error;
 use std::io::ErrorKind;
+use byteorder::ByteOrder;
+use std::marker::PhantomData;
 
 const TAG_END       : u8 = 0x0;
 const TAG_BYTE      : u8 = 0x1;
@@ -126,45 +128,46 @@ impl NbtTag {
 
 ///////////////////////
 
-pub struct NbtContainer {
-    values: HashMap<String, NbtTag>
+pub struct NbtReader<F: ByteOrder> {
+    phantom: PhantomData<F>
 }
 
-impl NbtContainer {
+impl <F: ByteOrder> NbtReader<F> {
+
     pub fn from_file_uncompressed(file: File)  {}
 
-    fn read<R: ReadBytesExt>(reader: &mut R) -> Result<NbtTag, Error> {
+    fn read<R: ReadBytesExt>(&self, reader: &mut R) -> Result<NbtTag, Error> {
         match reader.read_u8()? {
-            TAG_COMPOUND => NbtContainer::read_compound_tag(reader),
+            TAG_COMPOUND => self.read_compound_tag(reader),
             _ => Err(Error::new(ErrorKind::Other, "Unknown NBT identifier"))
         }
     }
 
-    fn read_compound_tag<T: ReadBytesExt>(reader: &mut T) -> Result<NbtTag, Error> {
+    fn read_compound_tag<T: ReadBytesExt>(&self, reader: &mut T) -> Result<NbtTag, Error> {
         let mut tags = HashMap::new();
-        let tag_name = NbtContainer::read_utf8_string(reader)?;
+        let tag_name = self.read_utf8_string(reader)?;
         loop {
             let id = reader.read_u8()?;
             if id == TAG_END {
                 break;
             }
-            let name = NbtContainer::read_utf8_string(reader)?;
-            let tag = NbtContainer::read(reader)?;
+            let name = self.read_utf8_string(reader)?;
+            let tag = self.read(reader)?;
             tags.insert(name, tag);
         }
         Ok(NbtTag::Compound(tags))
     }
 
     /// Reads a UTF8 string.
-    fn read_utf8_string<T: ReadBytesExt>(reader: &mut T) -> Result<String, Error> {
-        let len = reader.read_i16::<BigEndian>()?;
+    fn read_utf8_string<T: ReadBytesExt>(&self, reader: &mut T) -> Result<String, Error> {
+        let len = reader.read_i16::<F>()?;
         let mut buf = Vec::with_capacity(len as usize);
-        NbtContainer::read_slice(reader, &mut buf, len);
+        self.read_slice(reader, &mut buf, len);
         Ok(String::from_utf8(buf).unwrap())
     }
 
     /// Reads a slice of bytes of given length from reader and saves it in a given buffer.
-    fn read_slice<T: ReadBytesExt>(reader: &mut T, buf: &mut Vec<u8>, size: i16) {
+    fn read_slice<T: ReadBytesExt>(&self, reader: &mut T, buf: &mut Vec<u8>, size: i16) {
         for i in 0..size {
             buf.push(reader.read_u8().unwrap());
         }
@@ -172,4 +175,9 @@ impl NbtContainer {
 }
 
 
-fn main() {}
+
+
+
+fn main() {
+
+}
