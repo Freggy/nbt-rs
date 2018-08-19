@@ -25,6 +25,16 @@ const TAG_COMPOUND  : u8 = 0xA;
 const TAG_INT_ARRAY : u8 = 0xB;
 const TAG_LONG_ARRAY: u8 = 0xC;
 
+pub enum Compression {
+    Gzip,
+    Zlib,
+    None,
+}
+
+
+//-------------------------//
+
+
 /// Represents an NBT tag.
 pub enum NbtTag {
     Byte(u8),
@@ -37,12 +47,6 @@ pub enum NbtTag {
     Compound(HashMap<String, NbtTag>),
     IntArray(Vec<i32>),
     LongArray(Vec<i64>),
-}
-
-pub enum Compression {
-    Gzip,
-    Zlib,
-    None,
 }
 
 impl NbtTag {
@@ -126,15 +130,59 @@ impl NbtTag {
     }
 }
 
-///////////////////////
 
+//-------------------------//
+
+
+/// Builder for NBT tags.
+pub struct NbtBuilder {
+    values: HashMap<String, NbtTag>,
+    root_tag_name: String
+}
+
+impl NbtBuilder {
+
+    /// Creates a new instance of NbtBuilder. The root tag name will be empty.
+    pub fn new() -> NbtBuilder {
+        NbtBuilder {
+            values: HashMap::new(),
+            root_tag_name: String::new()
+        }
+    }
+
+    /// Creates a new instance of NbtBuilder with the given root tag name.
+    pub fn with_root_tag(root_tag_name: String) -> NbtBuilder {
+        NbtBuilder {
+            values: HashMap::new(),
+            root_tag_name
+        }
+    }
+
+    /// Adds an i32 to the compound.
+    pub fn add_i32(mut self, key: &str, val: i32) -> NbtBuilder {
+        self.values.insert(key.to_string(), NbtTag::Int(val));
+        self
+    }
+
+    // TODO: Return object that contains root tag
+    pub fn build(self) -> NbtTag {
+        NbtTag::Compound(self.values)
+    }
+}
+
+
+//-------------------------//
+
+
+/// Provides functions for reading NBT data from compressed and uncompressed files.
 pub struct NbtReader<F: ByteOrder> {
     phantom: PhantomData<F>
 }
 
 impl <F: ByteOrder> NbtReader<F> {
 
-    pub fn from_file_uncompressed(file: File)  {}
+    /// Reads the content of the given uncompressed file and creates NBT compound tag.
+    pub fn from_uncompressed_file(file: File) /*-> Result<NbtTag, Error> */{}
 
     fn read<R: ReadBytesExt>(&self, reader: &mut R) -> Result<NbtTag, Error> {
         match reader.read_u8()? {
@@ -143,7 +191,8 @@ impl <F: ByteOrder> NbtReader<F> {
         }
     }
 
-    fn read_compound_tag<T: ReadBytesExt>(&self, reader: &mut T) -> Result<NbtTag, Error> {
+    /// Reads a compound tag.
+    fn read_compound_tag<R: ReadBytesExt>(&self, reader: &mut R) -> Result<NbtTag, Error> {
         let mut tags = HashMap::new();
         let tag_name = self.read_utf8_string(reader)?;
         loop {
@@ -159,7 +208,7 @@ impl <F: ByteOrder> NbtReader<F> {
     }
 
     /// Reads a UTF8 string.
-    fn read_utf8_string<T: ReadBytesExt>(&self, reader: &mut T) -> Result<String, Error> {
+    fn read_utf8_string<R: ReadBytesExt>(&self, reader: &mut R) -> Result<String, Error> {
         let len = reader.read_i16::<F>()?;
         let mut buf = Vec::with_capacity(len as usize);
         self.read_slice(reader, &mut buf, len);
@@ -167,17 +216,15 @@ impl <F: ByteOrder> NbtReader<F> {
     }
 
     /// Reads a slice of bytes of given length from reader and saves it in a given buffer.
-    fn read_slice<T: ReadBytesExt>(&self, reader: &mut T, buf: &mut Vec<u8>, size: i16) {
+    fn read_slice<R: ReadBytesExt>(&self, reader: &mut R, buf: &mut Vec<u8>, size: i16) {
         for i in 0..size {
             buf.push(reader.read_u8().unwrap());
         }
     }
 }
 
-
-
-
-
 fn main() {
-
+    let tag = NbtBuilder::new().add_i32("hallo", 2).add_i32("hello", 3).build();
+    println!("{:?}", tag.as_compound().unwrap().get("hallo").unwrap().as_int());
+    println!("{:?}", tag.as_compound().unwrap().get("hello").unwrap().as_int());
 }
