@@ -6,3 +6,4 @@ authors = ["Yannic Rieger"]
 [dependencies]
 flate2 = "1.0"
 byteorder = "1.2.3"
+bytebuffer = "0.2.1"

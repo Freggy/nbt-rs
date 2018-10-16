@@ -1,5 +1,6 @@
 extern crate flate2;
 extern crate byteorder;
+extern crate bytebuffer;
 
 use std::collections::HashMap;
 use std::fs::File;
@@ -9,6 +10,15 @@ use byteorder::BigEndian;
 use std::io::Error;
 use std::io::ErrorKind;
 use std::marker::PhantomData;
+use byteorder::ByteOrder;
+use bytebuffer::ByteBuffer;
+use std::io::Cursor;
+
+
+//
+// Constants
+//
+
 
 const TAG_END       : u8 = 0x0;
 const TAG_BYTE      : u8 = 0x1;
@@ -31,7 +41,9 @@ pub enum Compression {
 }
 
 
-//-------------------------//
+//
+// NBT Tag
+//
 
 
 /// Represents an NBT tag.
@@ -132,7 +144,9 @@ impl NbtTag {
 }
 
 
-//-------------------------//
+//
+// NBT Builder
+//
 
 
 /// Builder for NBT tags.
@@ -172,7 +186,9 @@ impl NbtBuilder {
 }
 
 
-//-------------------------//
+//
+// NBT Reader
+//
 
 
 /// Provides functions for reading NBT data from compressed and uncompressed files.
@@ -187,18 +203,18 @@ impl <F: ByteOrder> NbtReader<F> {
 
     fn read<R: ReadBytesExt>(&self, reader: &mut R) -> Result<NbtTag, Error> {
         match reader.read_u8()? {
-            TAG_COMPOUND => self.read_compound_tag(reader),
-            TAG_BYTE => self.read_byte(reader),
-            TAG_SHORT => self.read_short(reader),
-            TAG_INT => self.read_int(reader),
-            TAG_LONG => self.read_float(reader),
-            TAG_FLOAT => self.read_float(reader),
-            TAG_DOUBLE => self.read_double(reader),
-            TAG_BYTE_ARRAY => self.read_byte_array(reader),
+            TAG_COMPOUND => Ok(self.read_compound_tag(reader)?),
+            TAG_BYTE => Ok(self.read_byte(reader)?),
+            TAG_SHORT => Ok(self.read_short(reader)?),
+            TAG_INT => Ok(self.read_int(reader)?),
+            TAG_LONG => Ok(self.read_float(reader)?),
+            TAG_FLOAT => Ok(self.read_float(reader)?),
+            TAG_DOUBLE => Ok(self.read_double(reader)?),
+            TAG_BYTE_ARRAY => Ok(self.read_byte_array(reader)?),
             TAG_STRING => Ok(NbtTag::String(self.read_utf8_string(reader)?)),
-            TAG_LIST => self.read_list(reader),
-            TAG_INT_ARRAY => self.read_int_array(reader),
-            TAG_LONG_ARRAY => self.read_long_array(reader),
+            TAG_LIST => Ok(self.read_list(reader)?),
+            TAG_INT_ARRAY => Ok(self.read_int_array(reader)?),
+            TAG_LONG_ARRAY => Ok(self.read_long_array(reader)?),
             _ => Err(Error::new(ErrorKind::Other, "Unknown NBT identifier"))
         }
     }
@@ -262,11 +278,17 @@ impl <F: ByteOrder> NbtReader<F> {
         let mut tags = vec![];
         self.read_slice(reader, &mut bytes, len);
 
+        let mut buf = ByteBuffer::from_bytes(bytes.as_slice());
 
-        match id {
-            TAG_COMPOUND => self.read_types(self.read_compound_tag, reader, &mut tags)
-        }
+        /*
+        loop {
+            match buf.read_u8() {
+                TAG_COMPOUND => Ok(tags.push(self.read_compound_tag(Cursor::new(buf.to_bytes()))?)),
+                _ => ";"
+            }
+        } */
 
+        //Err(Error::new(ErrorKind::Other, "Unknown NBT identifier"))
         Ok(NbtTag::List(tags))
     }
 
@@ -312,15 +334,10 @@ impl <F: ByteOrder> NbtReader<F> {
             buf.push(reader.read_u8().unwrap());
         }
     }
-
-    fn read_types<R: ReadBytesExt>(&self, read_func: &Fn(&mut R) -> Result<NbtTag, Error>, reader: &mut R, tags: &mut Vec<NbtTag>) {
-        loop {
-            let tag: NbtTag = read_func(self, reader).unwrap();
-            //tags.push(tag)
-        }
-    }
 }
 
 fn main() {
-
+    let mut buffer = ByteBuffer::new();
+    buffer.write_bytes(&vec![0x1, 0xFF, 0x45]);
+    let mut cur = Cursor::new(buffer.to_bytes());
 }
