@@ -15,24 +15,26 @@ use bytebuffer::ByteBuffer;
 use std::io::Cursor;
 
 
+// TODO: rewrite using byte buffer
+
 //
 // Constants
 //
 
 
-const TAG_END       : u8 = 0x0;
-const TAG_BYTE      : u8 = 0x1;
-const TAG_SHORT     : u8 = 0x2;
-const TAG_INT       : u8 = 0x3;
-const TAG_LONG      : u8 = 0x4;
-const TAG_FLOAT     : u8 = 0x5;
-const TAG_DOUBLE    : u8 = 0x6;
-const TAG_BYTE_ARRAY: u8 = 0x7;
-const TAG_STRING    : u8 = 0x8;
-const TAG_LIST      : u8 = 0x9;
-const TAG_COMPOUND  : u8 = 0xA;
-const TAG_INT_ARRAY : u8 = 0xB;
-const TAG_LONG_ARRAY: u8 = 0xC;
+const TAG_END         : u8 = 0x0;
+const TAG_BYTE        : u8 = 0x1;
+const TAG_SHORT       : u8 = 0x2;
+const TAG_INT         : u8 = 0x3;
+const TAG_LONG        : u8 = 0x4;
+const TAG_FLOAT       : u8 = 0x5;
+const TAG_DOUBLE      : u8 = 0x6;
+const TAG_BYTE_ARRAY  : u8 = 0x7;
+const TAG_STRING      : u8 = 0x8;
+const TAG_LIST        : u8 = 0x9;
+const TAG_COMPOUND    : u8 = 0xA;
+const TAG_INT_ARRAY   : u8 = 0xB;
+const TAG_LONG_ARRAY  : u8 = 0xC;
 
 pub enum Compression {
     Gzip,
@@ -203,18 +205,18 @@ impl <F: ByteOrder> NbtReader<F> {
 
     fn read<R: ReadBytesExt>(&self, reader: &mut R) -> Result<NbtTag, Error> {
         match reader.read_u8()? {
-            TAG_COMPOUND => Ok(self.read_compound_tag(reader)?),
-            TAG_BYTE => Ok(self.read_byte(reader)?),
-            TAG_SHORT => Ok(self.read_short(reader)?),
-            TAG_INT => Ok(self.read_int(reader)?),
-            TAG_LONG => Ok(self.read_float(reader)?),
-            TAG_FLOAT => Ok(self.read_float(reader)?),
-            TAG_DOUBLE => Ok(self.read_double(reader)?),
-            TAG_BYTE_ARRAY => Ok(self.read_byte_array(reader)?),
-            TAG_STRING => Ok(NbtTag::String(self.read_utf8_string(reader)?)),
-            TAG_LIST => Ok(self.read_list(reader)?),
-            TAG_INT_ARRAY => Ok(self.read_int_array(reader)?),
-            TAG_LONG_ARRAY => Ok(self.read_long_array(reader)?),
+            TAG_COMPOUND    => Ok(self.read_compound_tag(reader)?),
+            TAG_BYTE        => Ok(self.read_byte(reader)?),
+            TAG_SHORT       => Ok(self.read_short(reader)?),
+            TAG_INT         => Ok(self.read_int(reader)?),
+            TAG_LONG        => Ok(self.read_float(reader)?),
+            TAG_FLOAT       => Ok(self.read_float(reader)?),
+            TAG_DOUBLE      => Ok(self.read_double(reader)?),
+            TAG_BYTE_ARRAY  => Ok(self.read_byte_array(reader)?),
+            TAG_STRING      => Ok(NbtTag::String(self.read_utf8_string(reader)?)),
+            TAG_LIST        => Ok(self.read_list(reader)?),
+            TAG_INT_ARRAY   => Ok(self.read_int_array(reader)?),
+            TAG_LONG_ARRAY  => Ok(self.read_long_array(reader)?),
             _ => Err(Error::new(ErrorKind::Other, "Unknown NBT identifier"))
         }
     }
